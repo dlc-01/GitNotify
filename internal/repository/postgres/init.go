@@ -14,13 +14,18 @@ func NewPool(ctx context.Context, cfg *config.PostgresConfig) (*pgxpool.Pool, er
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName,
 	)
 
-	pool, err := pgxpool.New(ctx, dsn)
+	poolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return nil, fmt.Errorf("create pool: %w", err)
+		return nil, wrap("NewPool", ErrConnect)
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return nil, wrap("NewPool", ErrConnect)
 	}
 
 	if err := pool.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("ping postgres: %w", err)
+		return nil, wrap("NewPool", ErrPing)
 	}
 
 	return pool, nil
