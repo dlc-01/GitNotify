@@ -1,2 +1,5 @@
 .idea
-.env
+.env.bot
+.env.webhook
+.env.notifier
+*.env

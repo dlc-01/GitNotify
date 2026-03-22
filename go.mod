@@ -8,6 +8,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/pressly/goose/v3 v3.20.0
 	github.com/stretchr/testify v1.11.1
+	github.com/segmentio/kafka-go v0.4.5
 )
 
 require (
