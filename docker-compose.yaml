@@ -1,20 +1,6 @@
 version: "3.9"
 
 services:
-  postgres-bot:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: gitnotify
-      POSTGRES_PASSWORD: gitnotify
-      POSTGRES_DB: gitnotify_bot
-    volumes:
-      - pgdata-bot:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gitnotify -d gitnotify_bot"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     environment:
@@ -42,6 +28,34 @@ services:
       timeout: 10s
       retries: 5
 
+  postgres-bot:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gitnotify
+      POSTGRES_PASSWORD: gitnotify
+      POSTGRES_DB: gitnotify_bot
+    volumes:
+      - pgdata-bot:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitnotify -d gitnotify_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-notifier:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gitnotify
+      POSTGRES_PASSWORD: gitnotify
+      POSTGRES_DB: gitnotify_notifier
+    volumes:
+      - pgdata-notifier:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitnotify -d gitnotify_notifier"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   bot:
     build:
       context: .
@@ -54,6 +68,7 @@ services:
       kafka:
         condition: service_healthy
     restart: unless-stopped
+
   webhook:
     build:
       context: .
@@ -67,7 +82,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-
+  notifier:
+    build:
+      context: .
+      dockerfile: cmd/notifier/Dockerfile
+    env_file:
+      - .env.notifier
+    depends_on:
+      postgres-notifier:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata-bot:
+  pgdata-notifier:
