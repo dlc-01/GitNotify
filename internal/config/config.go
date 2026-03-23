@@ -13,8 +13,12 @@ type Config struct {
 	Postgres PostgresConfig
 	Kafka    KafkaConfig
 	Webhook  WebhookConfig
+	Poller   PollerConfig
 }
 
+type PollerConfig struct {
+	YouTubeAPIKey string
+}
 type WebhookConfig struct {
 	Host         string
 	Port         int

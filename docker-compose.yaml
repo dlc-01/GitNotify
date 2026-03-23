@@ -94,7 +94,16 @@ services:
       kafka:
         condition: service_healthy
     restart: unless-stopped
-
+  poller:
+    build:
+      context: .
+      dockerfile: cmd/poller/Dockerfile
+    env_file:
+      - .env.poller
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
 volumes:
   pgdata-bot:
   pgdata-notifier:
