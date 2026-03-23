@@ -50,7 +50,7 @@ func LogRequest(log *slog.Logger) Middleware {
 	}
 }
 
-func AdminOnly(sender *Sender, log *slog.Logger) Middleware {
+func AdminOnly(sender Senderer, log *slog.Logger) Middleware {
 	return func(next HandlerFunc) HandlerFunc {
 		return func(ctx context.Context, update tgbotapi.Update) {
 			if update.Message == nil {
@@ -76,7 +76,7 @@ func AdminOnly(sender *Sender, log *slog.Logger) Middleware {
 					),
 					slog.String("command", update.Message.Command()),
 				)
-				sender.SendErr(chat.ID, Wrap("AdminOnly", ErrNotAdmin))
+				sender.Send(chat.ID, FormatError(Wrap("AdminOnly", ErrNotAdmin)))
 				return
 			}
 

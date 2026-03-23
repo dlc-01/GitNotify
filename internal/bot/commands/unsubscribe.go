@@ -14,13 +14,14 @@ import (
 
 type UnsubscribeCommand struct {
 	repo     repository.Repository
-	sender   *core.Sender
+	sender   core.Senderer
 	log      *slog.Logger
-	producer producer.Producer
+	producer producer.MultiProducer
+	topic    internalkafka.Topic
 }
 
-func NewUnsubscribeCommand(repo repository.Repository, sender *core.Sender, log *slog.Logger, p producer.Producer) *UnsubscribeCommand {
-	return &UnsubscribeCommand{repo: repo, sender: sender, log: log, producer: p}
+func NewUnsubscribeCommand(repo repository.Repository, sender core.Senderer, log *slog.Logger, p producer.MultiProducer, topic internalkafka.Topic) *UnsubscribeCommand {
+	return &UnsubscribeCommand{repo: repo, sender: sender, log: log, producer: p, topic: topic}
 }
 
 func (c *UnsubscribeCommand) Name() string        { return "unsubscribe" }
@@ -53,7 +54,7 @@ func (c *UnsubscribeCommand) Execute(ctx context.Context, chatID int64, args str
 		return
 	}
 
-	if err := c.producer.Produce(ctx, internalkafka.SubscriptionDeletedMessage{
+	if err := c.producer.ProduceTo(ctx, c.topic, internalkafka.SubscriptionDeletedMessage{
 		ChatID:  chatID,
 		RepoURL: repoURL,
 	}); err != nil {
@@ -68,6 +69,5 @@ func (c *UnsubscribeCommand) Execute(ctx context.Context, chatID int64, args str
 		slog.Group("chat", slog.Int64("id", chatID)),
 		slog.String("repo", repoURL),
 	)
-
 	c.sender.Send(chatID, "✅ Unsubscribed from "+repoURL)
 }

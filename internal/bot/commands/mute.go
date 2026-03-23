@@ -16,13 +16,14 @@ import (
 
 type MuteCommand struct {
 	repo     repository.Repository
-	sender   *core.Sender
+	sender   core.Senderer
 	log      *slog.Logger
-	producer producer.Producer
+	producer producer.MultiProducer
+	topic    internalkafka.Topic
 }
 
-func NewMuteCommand(repo repository.Repository, sender *core.Sender, log *slog.Logger, p producer.Producer) *MuteCommand {
-	return &MuteCommand{repo: repo, sender: sender, log: log, producer: p}
+func NewMuteCommand(repo repository.Repository, sender core.Senderer, log *slog.Logger, p producer.MultiProducer, topic internalkafka.Topic) *MuteCommand {
+	return &MuteCommand{repo: repo, sender: sender, log: log, producer: p, topic: topic}
 }
 
 func (c *MuteCommand) Name() string        { return "mute" }
@@ -65,7 +66,7 @@ func (c *MuteCommand) Execute(ctx context.Context, chatID int64, args string) {
 		return
 	}
 
-	if err := c.producer.Produce(ctx, internalkafka.SubscriptionMutedMessage{
+	if err := c.producer.ProduceTo(ctx, c.topic, internalkafka.SubscriptionMutedMessage{
 		ChatID:  chatID,
 		RepoURL: repoURL,
 		Event:   string(event),
@@ -83,6 +84,5 @@ func (c *MuteCommand) Execute(ctx context.Context, chatID int64, args string) {
 		slog.String("repo", repoURL),
 		slog.String("event", string(event)),
 	)
-
 	c.sender.Send(chatID, fmt.Sprintf("🔕 Muted %s events for %s", string(event), repoURL))
 }

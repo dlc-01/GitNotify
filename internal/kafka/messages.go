@@ -15,3 +15,9 @@ type SubscriptionMutedMessage struct {
 	RepoURL string `json:"repo_url"`
 	Event   string `json:"event"`
 }
+
+type WebhookEventMessage struct {
+	RepoURL   string `json:"repo_url"`
+	EventType string `json:"event_type"`
+	Source    string `json:"source"`
+}

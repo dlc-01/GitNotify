@@ -32,7 +32,7 @@ func main() {
 }
 
 func run(log *slog.Logger) error {
-	configPath := flag.String("config", "config.yaml", "path to config file")
+	configPath := flag.String("config", "", "path to config file (optional)")
 	flag.Parse()
 
 	cfg, err := config.Load(*configPath)
@@ -92,30 +92,20 @@ func run(log *slog.Logger) error {
 		log,
 	)
 
-	pCreated := producer.NewLogging(
-		producer.New(cfg.Kafka.Brokers, internalkafka.TopicSubscriptionCreated),
-		internalkafka.TopicSubscriptionCreated.String(),
+	prod := producer.NewLoggingMulti(
+		producer.NewMulti(
+			cfg.Kafka.Brokers,
+			internalkafka.TopicSubscriptionCreated,
+			internalkafka.TopicSubscriptionDeleted,
+			internalkafka.TopicSubscriptionMuted,
+		),
 		log,
 	)
-	defer pCreated.Close()
-
-	pDeleted := producer.NewLogging(
-		producer.New(cfg.Kafka.Brokers, internalkafka.TopicSubscriptionDeleted),
-		internalkafka.TopicSubscriptionDeleted.String(),
-		log,
-	)
-	defer pDeleted.Close()
-
-	pMuted := producer.NewLogging(
-		producer.New(cfg.Kafka.Brokers, internalkafka.TopicSubscriptionMuted),
-		internalkafka.TopicSubscriptionMuted.String(),
-		log,
-	)
-	defer pMuted.Close()
+	defer prod.Close()
 
 	log.Info("kafka producers initialized")
 
-	app, err := bot.New(cfg.Bot.Token, repo, log, pCreated, pDeleted, pMuted)
+	app, err := bot.New(cfg.Bot.Token, repo, log, prod)
 	if err != nil {
 		return fmt.Errorf("init bot: %w", err)
 	}

@@ -16,7 +16,7 @@ type Handler struct {
 	api              *tgbotapi.BotAPI
 	repo             repository.Repository
 	log              *slog.Logger
-	sender           *core.Sender
+	sender           core.Senderer
 	registry         *core.Registry
 	callbackRegistry *callback.Registry
 	dispatch         core.HandlerFunc
@@ -26,7 +26,7 @@ func NewHandler(
 	api *tgbotapi.BotAPI,
 	repo repository.Repository,
 	log *slog.Logger,
-	sender *core.Sender,
+	sender core.Senderer,
 	registry *core.Registry,
 	callbackRegistry *callback.Registry,
 ) *Handler {
@@ -64,9 +64,7 @@ func (h *Handler) handle(ctx context.Context, update tgbotapi.Update) {
 func (h *Handler) handleMessage(ctx context.Context, update tgbotapi.Update) {
 	if err := h.upsertUserAndChat(ctx, update.Message); err != nil {
 		h.log.Error("upsert user and chat",
-			slog.Group("chat",
-				slog.Int64("id", update.Message.Chat.ID),
-			),
+			slog.Group("chat", slog.Int64("id", update.Message.Chat.ID)),
 			slog.String("err", err.Error()),
 		)
 		return
@@ -98,9 +96,7 @@ func (h *Handler) handleCallback(ctx context.Context, update tgbotapi.Update) {
 	if !ok {
 		h.log.Warn("unknown callback",
 			slog.String("data", query.Data),
-			slog.Group("user",
-				slog.Int64("id", query.From.ID),
-			),
+			slog.Group("user", slog.Int64("id", query.From.ID)),
 		)
 		h.sender.AnswerCallback(query.ID, "Unknown action")
 		return

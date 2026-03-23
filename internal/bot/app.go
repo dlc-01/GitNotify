@@ -14,6 +14,7 @@ import (
 	"github.com/dlc-01/GitNotify/internal/bot/callback"
 	"github.com/dlc-01/GitNotify/internal/bot/commands"
 	"github.com/dlc-01/GitNotify/internal/bot/core"
+	internalkafka "github.com/dlc-01/GitNotify/internal/kafka"
 	"github.com/dlc-01/GitNotify/internal/kafka/producer"
 	"github.com/dlc-01/GitNotify/internal/repository"
 )
@@ -28,9 +29,7 @@ func New(
 	token string,
 	repo repository.Repository,
 	log *slog.Logger,
-	pCreated producer.Producer,
-	pDeleted producer.Producer,
-	pMuted producer.Producer,
+	prod producer.MultiProducer,
 ) (*App, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
@@ -44,10 +43,10 @@ func New(
 	registry := core.NewRegistry()
 	callbackRegistry := callback.NewRegistry()
 
-	registry.Register(commands.NewSubscribeCommand(repo, sender, log, pCreated))
-	registry.Register(commands.NewUnsubscribeCommand(repo, sender, log, pDeleted))
+	registry.Register(commands.NewSubscribeCommand(repo, sender, log, prod, internalkafka.TopicSubscriptionCreated))
+	registry.Register(commands.NewUnsubscribeCommand(repo, sender, log, prod, internalkafka.TopicSubscriptionDeleted))
 	registry.Register(commands.NewListCommand(repo, sender, log))
-	registry.Register(commands.NewMuteCommand(repo, sender, log, pMuted))
+	registry.Register(commands.NewMuteCommand(repo, sender, log, prod, internalkafka.TopicSubscriptionMuted))
 	registry.Register(commands.NewHelpCommand(sender, registry))
 	registry.Register(commands.NewStartCommand(sender, registry))
 

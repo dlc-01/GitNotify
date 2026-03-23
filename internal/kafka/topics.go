@@ -10,6 +10,9 @@ const (
 	TopicEventPR             Topic = "events.pr"
 	TopicEventIssue          Topic = "events.issue"
 	TopicEventPipeline       Topic = "events.pipeline"
+	TopicEventAnswer         Topic = "events.answer"
+	TopicEventPost           Topic = "events.post"
+	TopicEventVideo          Topic = "events.video"
 )
 
 func (t Topic) String() string {

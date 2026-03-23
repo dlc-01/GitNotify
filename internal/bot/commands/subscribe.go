@@ -14,13 +14,14 @@ import (
 
 type SubscribeCommand struct {
 	repo     repository.Repository
-	sender   *core.Sender
+	sender   core.Senderer
 	log      *slog.Logger
-	producer producer.Producer
+	producer producer.MultiProducer
+	topic    internalkafka.Topic
 }
 
-func NewSubscribeCommand(repo repository.Repository, sender *core.Sender, log *slog.Logger, p producer.Producer) *SubscribeCommand {
-	return &SubscribeCommand{repo: repo, sender: sender, log: log, producer: p}
+func NewSubscribeCommand(repo repository.Repository, sender core.Senderer, log *slog.Logger, p producer.MultiProducer, topic internalkafka.Topic) *SubscribeCommand {
+	return &SubscribeCommand{repo: repo, sender: sender, log: log, producer: p, topic: topic}
 }
 
 func (c *SubscribeCommand) Name() string        { return "subscribe" }
@@ -58,7 +59,7 @@ func (c *SubscribeCommand) Execute(ctx context.Context, chatID int64, args strin
 		return
 	}
 
-	if err := c.producer.Produce(ctx, internalkafka.SubscriptionCreatedMessage{
+	if err := c.producer.ProduceTo(ctx, c.topic, internalkafka.SubscriptionCreatedMessage{
 		ChatID:  chatID,
 		RepoURL: repoURL,
 	}); err != nil {
@@ -73,6 +74,5 @@ func (c *SubscribeCommand) Execute(ctx context.Context, chatID int64, args strin
 		slog.Group("chat", slog.Int64("id", chatID)),
 		slog.String("repo", sub.RepoURL),
 	)
-
 	c.sender.Send(chatID, "✅ Subscribed to "+sub.RepoURL)
 }

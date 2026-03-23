@@ -15,11 +15,11 @@ import (
 
 type ListCommand struct {
 	repo   repository.Repository
-	sender *core.Sender
+	sender core.Senderer
 	log    *slog.Logger
 }
 
-func NewListCommand(repo repository.Repository, sender *core.Sender, log *slog.Logger) *ListCommand {
+func NewListCommand(repo repository.Repository, sender core.Senderer, log *slog.Logger) *ListCommand {
 	return &ListCommand{repo: repo, sender: sender, log: log}
 }
 
@@ -32,8 +32,7 @@ func (c *ListCommand) Execute(ctx context.Context, chatID int64, args string) {
 	if err != nil {
 		c.log.Error("list subscriptions",
 			slog.Group("chat",
-				slog.Int64("id", chatID),
-			),
+				slog.Int64("id", chatID)),
 			slog.String("err", err.Error()),
 		)
 		c.sender.SendErr(chatID, core.Wrap("Execute", core.ErrInternal))
@@ -46,9 +45,7 @@ func (c *ListCommand) Execute(ctx context.Context, chatID int64, args string) {
 	}
 
 	for _, sub := range subs {
-		text := formatSubscription(sub)
-		keyboard := buildKeyboard(sub)
-		c.sender.SendWithKeyboard(chatID, text, keyboard)
+		c.sender.SendWithKeyboard(chatID, formatSubscription(sub), buildKeyboard(sub))
 	}
 }
 

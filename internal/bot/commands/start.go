@@ -7,11 +7,11 @@ import (
 )
 
 type StartCommand struct {
-	sender   *core.Sender
+	sender   core.Senderer
 	registry *core.Registry
 }
 
-func NewStartCommand(sender *core.Sender, registry *core.Registry) *StartCommand {
+func NewStartCommand(sender core.Senderer, registry *core.Registry) *StartCommand {
 	return &StartCommand{sender: sender, registry: registry}
 }
 

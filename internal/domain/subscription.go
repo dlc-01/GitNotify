@@ -9,6 +9,9 @@ const (
 	EventPR       EventType = "pr"
 	EventIssue    EventType = "issue"
 	EventPipeline EventType = "pipeline"
+	EventAnswer   EventType = "answer"
+	EventPost     EventType = "post"
+	EventVideo    EventType = "video"
 )
 
 var AllEventTypes = []EventType{EventPush, EventPR, EventIssue, EventPipeline}

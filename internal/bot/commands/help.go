@@ -9,11 +9,11 @@ import (
 )
 
 type HelpCommand struct {
-	sender   *core.Sender
+	sender   core.Senderer
 	registry *core.Registry
 }
 
-func NewHelpCommand(sender *core.Sender, registry *core.Registry) *HelpCommand {
+func NewHelpCommand(sender core.Senderer, registry *core.Registry) *HelpCommand {
 	return &HelpCommand{sender: sender, registry: registry}
 }
 

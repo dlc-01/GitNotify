@@ -11,11 +11,11 @@ import (
 
 type UnsubscribeHandler struct {
 	repo   repository.Repository
-	sender *core.Sender
+	sender core.Senderer
 	log    *slog.Logger
 }
 
-func NewUnsubscribeHandler(repo repository.Repository, sender *core.Sender, log *slog.Logger) *UnsubscribeHandler {
+func NewUnsubscribeHandler(repo repository.Repository, sender core.Senderer, log *slog.Logger) *UnsubscribeHandler {
 	return &UnsubscribeHandler{repo: repo, sender: sender, log: log}
 }
 
@@ -30,8 +30,7 @@ func (h *UnsubscribeHandler) Execute(ctx context.Context, chatID int64, messageI
 		}
 		h.log.Error("callback unsubscribe",
 			slog.Group("chat",
-				slog.Int64("id", chatID),
-			),
+				slog.Int64("id", chatID)),
 			slog.String("repo", args),
 			slog.String("err", err.Error()),
 		)
@@ -41,10 +40,8 @@ func (h *UnsubscribeHandler) Execute(ctx context.Context, chatID int64, messageI
 
 	h.log.Info("unsubscribed via callback",
 		slog.Group("chat",
-			slog.Int64("id", chatID),
-		),
+			slog.Int64("id", chatID)),
 		slog.String("repo", args),
 	)
-
 	h.sender.EditText(chatID, messageID, "✅ Unsubscribed from "+args)
 }
