@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/dlc-01/GitNotify/internal/config"
 	internalkafka "github.com/dlc-01/GitNotify/internal/kafka"
@@ -80,7 +81,18 @@ func run(log *slog.Logger) error {
 	handler.RegisterParser(parser.NewGitHubParser())
 	handler.RegisterParser(parser.NewGitLabParser())
 
-	srv := webhook.NewServer(webhook.DefaultServerConfig(), handler, log)
+	srvCfg := webhook.ServerConfig{
+		Host:         cfg.Webhook.Host,
+		Port:         cfg.Webhook.Port,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	if srvCfg.Port == 0 {
+		srvCfg.Port = 8080
+	}
+
+	srv := webhook.NewServer(srvCfg, handler, log)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

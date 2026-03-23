@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/dlc-01/GitNotify/internal/config"
 )
 
 type ServerConfig struct {
@@ -17,10 +19,15 @@ type ServerConfig struct {
 	IdleTimeout  time.Duration
 }
 
-func DefaultServerConfig() ServerConfig {
+func NewServerConfig(cfg *config.WebhookConfig) ServerConfig {
+	port := cfg.Port
+	if port == 0 {
+		port = 8080
+	}
+	host := cfg.Host
 	return ServerConfig{
-		Host:         "",
-		Port:         8080,
+		Host:         host,
+		Port:         port,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -56,18 +63,23 @@ func NewServer(cfg ServerConfig, handler *Handler, log *slog.Logger) *Server {
 func (s *Server) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 
+	s.log.Info("webhook server started",
+		slog.String("addr", s.srv.Addr),
+	)
+
 	go func() {
-		s.log.Info("webhook server started",
-			slog.String("addr", s.srv.Addr),
-		)
 		if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
+		close(errCh)
 	}()
 
 	select {
 	case err := <-errCh:
-		return fmt.Errorf("server error: %w", err)
+		if err != nil {
+			return fmt.Errorf("server error: %w", err)
+		}
+		return nil
 	case <-ctx.Done():
 		s.log.Info("shutting down webhook server")
 
