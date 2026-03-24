@@ -32,10 +32,14 @@ func main() {
 }
 
 func run(log *slog.Logger) error {
-	configPath := flag.String("config", "", "path to config file (optional)")
+	configFile := flag.String("config", "", "path to config yaml")
+	envFile := flag.String("env-file", "", "path to .env file")
 	flag.Parse()
 
-	cfg, err := config.Load(*configPath)
+	cfg, err := config.Load(config.Options{
+		ConfigFile: *configFile,
+		EnvFile:    *envFile,
+	})
 	if err != nil {
 		var cfgErr *config.Error
 		if errors.As(err, &cfgErr) {
@@ -48,6 +52,8 @@ func run(log *slog.Logger) error {
 		}
 		return err
 	}
+
+	fmt.Printf("postgres config: %+v\n", cfg.Postgres)
 
 	level := slog.LevelInfo
 	if cfg.Debug {

@@ -13,6 +13,7 @@ func NewPool(ctx context.Context, cfg *config.PostgresConfig) (*pgxpool.Pool, er
 		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName,
 	)
+	fmt.Println(dsn)
 
 	poolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {

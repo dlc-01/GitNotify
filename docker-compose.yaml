@@ -37,10 +37,11 @@ services:
     volumes:
       - pgdata-bot:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gitnotify -d gitnotify_bot"]
+      test: [ "CMD-SHELL", "pg_isready -U gitnotify -d gitnotify_bot" ]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
 
   postgres-notifier:
     image: postgres:16-alpine
