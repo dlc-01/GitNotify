@@ -59,6 +59,10 @@ func run(log *slog.Logger) error {
 	prod := producer.NewLoggingMulti(
 		producer.NewMulti(
 			cfg.Kafka.Brokers,
+			internalkafka.TopicEventPush,
+			internalkafka.TopicEventPR,
+			internalkafka.TopicEventIssue,
+			internalkafka.TopicEventPipeline,
 			internalkafka.TopicEventAnswer,
 			internalkafka.TopicEventPost,
 			internalkafka.TopicEventVideo,
@@ -67,10 +71,17 @@ func run(log *slog.Logger) error {
 	)
 	defer prod.Close()
 
+	interval := 5 * time.Minute
+	if cfg.Poller.Interval > 0 {
+		interval = cfg.Poller.Interval
+	}
+
 	scheduler := poller.NewScheduler(
 		prod,
-		5*time.Minute,
+		interval,
 		log,
+		poller.NewGitHubPoller(cfg.Poller.GitHubToken),
+		poller.NewGitLabPoller(cfg.Poller.GitLabToken),
 		poller.NewStackOverflowPoller(),
 		poller.NewRedditPoller(),
 		poller.NewYouTubePoller(cfg.Poller.YouTubeAPIKey),
@@ -81,6 +92,9 @@ func run(log *slog.Logger) error {
 	c.Subscribe(internalkafka.TopicSubscriptionCreated, func(ctx context.Context, data []byte) error {
 		var msg internalkafka.SubscriptionCreatedMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
+			log.Error("unmarshal subscription created",
+				slog.String("err", err.Error()),
+			)
 			return err
 		}
 		scheduler.Watch(msg.RepoURL)
@@ -90,13 +104,18 @@ func run(log *slog.Logger) error {
 	c.Subscribe(internalkafka.TopicSubscriptionDeleted, func(ctx context.Context, data []byte) error {
 		var msg internalkafka.SubscriptionDeletedMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
+			log.Error("unmarshal subscription deleted",
+				slog.String("err", err.Error()),
+			)
 			return err
 		}
 		scheduler.Unwatch(msg.RepoURL)
 		return nil
 	})
 
-	log.Info("poller started")
+	log.Info("poller started",
+		slog.Duration("interval", interval),
+	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

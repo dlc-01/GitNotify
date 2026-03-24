@@ -75,10 +75,11 @@ func (p *StackOverflowPoller) Poll(ctx context.Context, url string, since time.T
 			continue
 		}
 		events = append(events, Event{
-			URL:    url,
-			Source: sourceStackOverflow,
-			Title:  item.Title,
-			Link:   item.Link,
+			URL:       url,
+			Source:    sourceStackOverflow,
+			EventType: "answer",
+			Title:     item.Title,
+			Link:      item.Link,
 		})
 	}
 	return events, nil

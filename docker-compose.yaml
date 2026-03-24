@@ -68,20 +68,6 @@ services:
       kafka:
         condition: service_healthy
     restart: unless-stopped
-
-  webhook:
-    build:
-      context: .
-      dockerfile: cmd/webhook/Dockerfile
-    env_file:
-      - .env.webhook
-    ports:
-      - "8080:8080"
-    depends_on:
-      kafka:
-        condition: service_healthy
-    restart: unless-stopped
-
   notifier:
     build:
       context: .

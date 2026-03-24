@@ -11,10 +11,11 @@ import (
 )
 
 type Event struct {
-	URL    string
-	Source string
-	Title  string
-	Link   string
+	URL       string
+	Source    string
+	EventType string
+	Title     string
+	Link      string
 }
 
 type Poller interface {
@@ -91,17 +92,17 @@ func (s *Scheduler) poll(ctx context.Context) {
 	s.mu.RUnlock()
 
 	for url, since := range urls {
-		poller := s.findPoller(url)
-		if poller == nil {
+		p := s.findPoller(url)
+		if p == nil {
 			s.log.Warn("no poller for url", slog.String("url", url))
 			continue
 		}
 
-		events, err := poller.Poll(ctx, url, since)
+		events, err := p.Poll(ctx, url, since)
 		if err != nil {
 			s.log.Error("poll failed",
 				slog.String("url", url),
-				slog.String("source", poller.Source()),
+				slog.String("source", p.Source()),
 				slog.String("err", err.Error()),
 			)
 			continue
@@ -112,15 +113,16 @@ func (s *Scheduler) poll(ctx context.Context) {
 		s.mu.Unlock()
 
 		for _, event := range events {
-			topic := sourceToTopic(poller.Source())
+			topic := eventTypeToTopic(event.EventType)
 			if err := s.producer.ProduceTo(ctx, topic, internalkafka.WebhookEventMessage{
 				RepoURL:   event.URL,
-				EventType: sourceToEventType(poller.Source()),
+				EventType: event.EventType,
 				Source:    event.Source,
 			}); err != nil {
 				s.log.Error("produce event",
 					slog.String("url", url),
-					slog.String("source", poller.Source()),
+					slog.String("source", p.Source()),
+					slog.String("event_type", event.EventType),
 					slog.String("err", err.Error()),
 				)
 			}
@@ -129,13 +131,13 @@ func (s *Scheduler) poll(ctx context.Context) {
 		if len(events) > 0 {
 			s.log.Info("polled events",
 				slog.String("url", url),
-				slog.String("source", poller.Source()),
+				slog.String("source", p.Source()),
 				slog.Int("count", len(events)),
 			)
 		} else {
 			s.log.Debug("no new events",
 				slog.String("url", url),
-				slog.String("source", poller.Source()),
+				slog.String("source", p.Source()),
 			)
 		}
 	}
@@ -150,28 +152,23 @@ func (s *Scheduler) findPoller(url string) Poller {
 	return nil
 }
 
-func sourceToTopic(source string) internalkafka.Topic {
-	switch source {
-	case "stackoverflow":
+func eventTypeToTopic(eventType string) internalkafka.Topic {
+	switch eventType {
+	case "push":
+		return internalkafka.TopicEventPush
+	case "pr":
+		return internalkafka.TopicEventPR
+	case "issue":
+		return internalkafka.TopicEventIssue
+	case "pipeline":
+		return internalkafka.TopicEventPipeline
+	case "answer":
 		return internalkafka.TopicEventAnswer
-	case "reddit":
+	case "post":
 		return internalkafka.TopicEventPost
-	case "youtube":
+	case "video":
 		return internalkafka.TopicEventVideo
 	default:
 		return internalkafka.TopicEventPush
-	}
-}
-
-func sourceToEventType(source string) string {
-	switch source {
-	case "stackoverflow":
-		return "answer"
-	case "reddit":
-		return "post"
-	case "youtube":
-		return "video"
-	default:
-		return "push"
 	}
 }

@@ -69,10 +69,11 @@ func (p *RedditPoller) Poll(ctx context.Context, url string, since time.Time) ([
 			continue
 		}
 		events = append(events, Event{
-			URL:    url,
-			Source: sourceReddit,
-			Title:  entry.Title,
-			Link:   entry.Link.Href,
+			URL:       url,
+			Source:    sourceReddit,
+			EventType: "post",
+			Title:     entry.Title,
+			Link:      entry.Link.Href,
 		})
 	}
 	return events, nil

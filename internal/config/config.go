@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -12,18 +13,14 @@ type Config struct {
 	Bot      BotConfig
 	Postgres PostgresConfig
 	Kafka    KafkaConfig
-	Webhook  WebhookConfig
 	Poller   PollerConfig
 }
 
 type PollerConfig struct {
+	Interval      time.Duration
+	GitHubToken   string
+	GitLabToken   string
 	YouTubeAPIKey string
-}
-type WebhookConfig struct {
-	Host         string
-	Port         int
-	GitHubSecret string
-	GitLabSecret string
 }
 
 type BotConfig struct {

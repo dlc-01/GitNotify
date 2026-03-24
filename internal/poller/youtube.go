@@ -82,10 +82,11 @@ func (p *YouTubePoller) Poll(ctx context.Context, url string, since time.Time) (
 			continue
 		}
 		events = append(events, Event{
-			URL:    url,
-			Source: sourceYouTube,
-			Title:  item.Snippet.Title,
-			Link:   fmt.Sprintf("https://youtube.com/watch?v=%s", item.Snippet.ResourceID.VideoID),
+			URL:       url,
+			Source:    sourceYouTube,
+			EventType: "video",
+			Title:     item.Snippet.Title,
+			Link:      fmt.Sprintf("https://youtube.com/watch?v=%s", item.Snippet.ResourceID.VideoID),
 		})
 	}
 	return events, nil
