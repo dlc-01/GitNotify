@@ -27,7 +27,7 @@ func (c *HelpCommand) Execute(ctx context.Context, chatID int64, args string) {
 
 func (c *HelpCommand) format() string {
 	var sb strings.Builder
-	sb.WriteString("GitNotify — GitHub & GitLab notifications in Telegram\n\n")
+	sb.WriteString("GitNotify — real-time notifications from GitHub, GitLab, Stack Overflow, Reddit and YouTube\n\n")
 	sb.WriteString("Commands:\n")
 	for _, cmd := range c.registry.All() {
 		sb.WriteString(fmt.Sprintf("%-30s — %s\n", cmd.Usage(), cmd.Description()))
