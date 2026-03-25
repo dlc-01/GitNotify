@@ -51,6 +51,11 @@ func (m *mockRepository) MuteEvent(ctx context.Context, chatID int64, repoURL st
 	return args.Error(0)
 }
 
+func (m *mockRepository) UnmuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error {
+	args := m.Called(ctx, chatID, repoURL, event)
+	return args.Error(0)
+}
+
 type mockMultiProducer struct {
 	mock.Mock
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/dlc-01/GitNotify/internal/repository"
 )
 
-type MuteCommand struct {
+type UnmuteCommand struct {
 	repo     repository.Repository
 	sender   core.Senderer
 	log      *slog.Logger
@@ -22,15 +22,15 @@ type MuteCommand struct {
 	topic    internalkafka.Topic
 }
 
-func NewMuteCommand(repo repository.Repository, sender core.Senderer, log *slog.Logger, p producer.MultiProducer, topic internalkafka.Topic) *MuteCommand {
-	return &MuteCommand{repo: repo, sender: sender, log: log, producer: p, topic: topic}
+func NewUnmuteCommand(repo repository.Repository, sender core.Senderer, log *slog.Logger, p producer.MultiProducer, topic internalkafka.Topic) *UnmuteCommand {
+	return &UnmuteCommand{repo: repo, sender: sender, log: log, producer: p, topic: topic}
 }
 
-func (c *MuteCommand) Name() string        { return "mute" }
-func (c *MuteCommand) Description() string { return "Mute an event type for a resource" }
-func (c *MuteCommand) Usage() string       { return "/mute <url> <event>" }
+func (c *UnmuteCommand) Name() string        { return "unmute" }
+func (c *UnmuteCommand) Description() string { return "Unmute an event type for a resource" }
+func (c *UnmuteCommand) Usage() string       { return "/unmute <url> <event>" }
 
-func (c *MuteCommand) Execute(ctx context.Context, chatID int64, args string) {
+func (c *UnmuteCommand) Execute(ctx context.Context, chatID int64, args string) {
 	parts := strings.Fields(args)
 	if len(parts) < 2 {
 		c.sender.SendErr(chatID, core.Wrap("Execute", core.ErrEmptyArgs))
@@ -45,10 +45,10 @@ func (c *MuteCommand) Execute(ctx context.Context, chatID int64, args string) {
 		return
 	}
 
-	if err := c.repo.MuteEvent(ctx, chatID, repoURL, event); err != nil {
+	if err := c.repo.UnmuteEvent(ctx, chatID, repoURL, event); err != nil {
 		var repoErr *repository.Error
 		if errors.As(err, &repoErr) && errors.Is(repoErr, repository.ErrNotFound) {
-			c.log.Warn("subscription not found on mute",
+			c.log.Warn("subscription not found on unmute",
 				slog.Group("chat", slog.Int64("id", chatID)),
 				slog.String("repo", repoURL),
 				slog.String("event", string(event)),
@@ -56,7 +56,7 @@ func (c *MuteCommand) Execute(ctx context.Context, chatID int64, args string) {
 			c.sender.Send(chatID, "Subscription not found")
 			return
 		}
-		c.log.Error("mute event",
+		c.log.Error("unmute event",
 			slog.Group("chat", slog.Int64("id", chatID)),
 			slog.String("repo", repoURL),
 			slog.String("event", string(event)),
@@ -66,12 +66,12 @@ func (c *MuteCommand) Execute(ctx context.Context, chatID int64, args string) {
 		return
 	}
 
-	if err := c.producer.ProduceTo(ctx, c.topic, internalkafka.SubscriptionMutedMessage{
+	if err := c.producer.ProduceTo(ctx, c.topic, internalkafka.SubscriptionUnmutedMessage{
 		ChatID:  chatID,
 		RepoURL: repoURL,
 		Event:   string(event),
 	}); err != nil {
-		c.log.Error("produce subscription muted",
+		c.log.Error("produce subscription unmuted",
 			slog.Group("chat", slog.Int64("id", chatID)),
 			slog.String("repo", repoURL),
 			slog.String("event", string(event)),
@@ -79,10 +79,10 @@ func (c *MuteCommand) Execute(ctx context.Context, chatID int64, args string) {
 		)
 	}
 
-	c.log.Info("muted event",
+	c.log.Info("unmuted event",
 		slog.Group("chat", slog.Int64("id", chatID)),
 		slog.String("repo", repoURL),
 		slog.String("event", string(event)),
 	)
-	c.sender.Send(chatID, fmt.Sprintf("🔕 Muted %s events for %s", string(event), repoURL))
+	c.sender.Send(chatID, fmt.Sprintf("🔔 Unmuted %s events for %s", string(event), repoURL))
 }

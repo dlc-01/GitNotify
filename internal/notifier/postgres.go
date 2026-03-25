@@ -112,6 +112,23 @@ func (r *postgresRepository) GetSubscribersByRepo(ctx context.Context, repoURL s
 	return chatIDs, nil
 }
 
+func (r *postgresRepository) UnmuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error {
+	start := time.Now()
+	_, err := r.db.Exec(ctx, `
+		UPDATE subscriptions
+		SET muted_events = array_remove(muted_events, $3::text)
+		WHERE chat_id = $1 AND repo_url = $2
+	`, chatID, repoURL, string(event))
+	r.log.Debug("UnmuteEvent",
+		slog.Group("chat", slog.Int64("id", chatID)),
+		slog.String("repo", repoURL),
+		slog.String("event", string(event)),
+		slog.Duration("duration", time.Since(start)),
+		slog.Any("err", err),
+	)
+	return err
+}
+
 var ErrNotFound = errors.New("not found")
 
 func isNoRows(err error) bool {

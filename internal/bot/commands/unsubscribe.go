@@ -25,9 +25,8 @@ func NewUnsubscribeCommand(repo repository.Repository, sender core.Senderer, log
 }
 
 func (c *UnsubscribeCommand) Name() string        { return "unsubscribe" }
-func (c *UnsubscribeCommand) Description() string { return "Unsubscribe from a repository" }
-func (c *UnsubscribeCommand) Usage() string       { return "/unsubscribe <repo_url>" }
-
+func (c *UnsubscribeCommand) Description() string { return "Unsubscribe from a repository or resource" }
+func (c *UnsubscribeCommand) Usage() string       { return "/unsubscribe <url>" }
 func (c *UnsubscribeCommand) Execute(ctx context.Context, chatID int64, args string) {
 	repoURL := strings.TrimSpace(args)
 	if repoURL == "" {

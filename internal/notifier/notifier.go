@@ -34,6 +34,7 @@ func (a *App) Run(ctx context.Context) error {
 	a.consumer.Subscribe(internalkafka.TopicSubscriptionCreated, a.handler.HandleSubscriptionCreated)
 	a.consumer.Subscribe(internalkafka.TopicSubscriptionDeleted, a.handler.HandleSubscriptionDeleted)
 	a.consumer.Subscribe(internalkafka.TopicSubscriptionMuted, a.handler.HandleSubscriptionMuted)
+	a.consumer.Subscribe(internalkafka.TopicSubscriptionUnmuted, a.handler.HandleSubscriptionUnmuted)
 
 	a.consumer.Subscribe(internalkafka.TopicEventPush, a.handler.HandleEvent)
 	a.consumer.Subscribe(internalkafka.TopicEventPR, a.handler.HandleEvent)

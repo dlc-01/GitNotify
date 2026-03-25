@@ -15,4 +15,5 @@ type Repository interface {
 	Unsubscribe(ctx context.Context, chatID int64, repoURL string) error
 	ListSubscriptions(ctx context.Context, chatID int64) ([]*domain.Subscription, error)
 	MuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error
+	UnmuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error
 }

@@ -21,3 +21,9 @@ type WebhookEventMessage struct {
 	EventType string `json:"event_type"`
 	Source    string `json:"source"`
 }
+
+type SubscriptionUnmutedMessage struct {
+	ChatID  int64  `json:"chat_id"`
+	RepoURL string `json:"repo_url"`
+	Event   string `json:"event"`
+}

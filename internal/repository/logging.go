@@ -101,3 +101,16 @@ func (r *LoggingRepository) MuteEvent(ctx context.Context, chatID int64, repoURL
 	)
 	return err
 }
+
+func (r *LoggingRepository) UnmuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error {
+	start := time.Now()
+	err := r.repo.UnmuteEvent(ctx, chatID, repoURL, event)
+	r.log.Debug("UnmuteEvent",
+		slog.Group("chat", slog.Int64("id", chatID)),
+		slog.String("repo", repoURL),
+		slog.String("event", string(event)),
+		slog.Duration("duration", time.Since(start)),
+		slog.Any("err", err),
+	)
+	return err
+}

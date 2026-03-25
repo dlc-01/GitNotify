@@ -47,11 +47,14 @@ func New(
 	registry.Register(commands.NewUnsubscribeCommand(repo, sender, log, prod, internalkafka.TopicSubscriptionDeleted))
 	registry.Register(commands.NewListCommand(repo, sender, log))
 	registry.Register(commands.NewMuteCommand(repo, sender, log, prod, internalkafka.TopicSubscriptionMuted))
+	registry.Register(commands.NewUnmuteCommand(repo, sender, log, prod, internalkafka.TopicSubscriptionUnmuted))
 	registry.Register(commands.NewHelpCommand(sender, registry))
 	registry.Register(commands.NewStartCommand(sender, registry))
+	registry.Register(commands.NewSourcesCommand(sender))
 
 	callbackRegistry.Register(callback.NewUnsubscribeHandler(repo, sender, log))
 	callbackRegistry.Register(callback.NewMuteHandler(repo, sender, log))
+	callbackRegistry.Register(callback.NewUnmuteHandler(repo, sender, log))
 
 	handler := NewHandler(api, repo, log, sender, registry, callbackRegistry)
 

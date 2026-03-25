@@ -63,16 +63,6 @@ func formatSubscription(sub *domain.Subscription) string {
 }
 
 func buildKeyboard(sub *domain.Subscription) tgbotapi.InlineKeyboardMarkup {
-	muteButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(domain.AllEventTypes))
-	for _, event := range domain.AllEventTypes {
-		if !sub.IsEventMuted(event) {
-			muteButtons = append(muteButtons, tgbotapi.NewInlineKeyboardButtonData(
-				fmt.Sprintf("🔕 %s", string(event)),
-				fmt.Sprintf("mute:%s:%s", sub.RepoURL, string(event)),
-			))
-		}
-	}
-
 	rows := [][]tgbotapi.InlineKeyboardButton{
 		{
 			tgbotapi.NewInlineKeyboardButtonData(
@@ -82,8 +72,23 @@ func buildKeyboard(sub *domain.Subscription) tgbotapi.InlineKeyboardMarkup {
 		},
 	}
 
-	if len(muteButtons) > 0 {
-		rows = append(rows, muteButtons)
+	eventButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(domain.AllEventTypes))
+	for _, event := range domain.AllEventTypes {
+		if sub.IsEventMuted(event) {
+			eventButtons = append(eventButtons, tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("🔔 %s", string(event)),
+				fmt.Sprintf("unmute:%s:%s", sub.RepoURL, string(event)),
+			))
+		} else {
+			eventButtons = append(eventButtons, tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("🔕 %s", string(event)),
+				fmt.Sprintf("mute:%s:%s", sub.RepoURL, string(event)),
+			))
+		}
+	}
+
+	if len(eventButtons) > 0 {
+		rows = append(rows, eventButtons)
 	}
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)

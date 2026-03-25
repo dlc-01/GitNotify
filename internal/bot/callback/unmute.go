@@ -1,0 +1,63 @@
+package callback
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"strings"
+
+	"github.com/dlc-01/GitNotify/internal/bot/core"
+	"github.com/dlc-01/GitNotify/internal/domain"
+	"github.com/dlc-01/GitNotify/internal/repository"
+)
+
+type UnmuteHandler struct {
+	repo   repository.Repository
+	sender core.Senderer
+	log    *slog.Logger
+}
+
+func NewUnmuteHandler(repo repository.Repository, sender core.Senderer, log *slog.Logger) *UnmuteHandler {
+	return &UnmuteHandler{repo: repo, sender: sender, log: log}
+}
+
+func (h *UnmuteHandler) Action() string { return "unmute" }
+
+func (h *UnmuteHandler) Execute(ctx context.Context, chatID int64, messageID int, args string) {
+	lastColon := strings.LastIndex(args, ":")
+	if lastColon == -1 {
+		h.sender.AnswerCallback("", "Invalid callback data")
+		return
+	}
+
+	repoURL := args[:lastColon]
+	event := domain.EventType(args[lastColon+1:])
+
+	if repoURL == "" || !event.Valid() {
+		h.sender.AnswerCallback("", "Invalid event type")
+		return
+	}
+
+	if err := h.repo.UnmuteEvent(ctx, chatID, repoURL, event); err != nil {
+		var repoErr *repository.Error
+		if errors.As(err, &repoErr) && errors.Is(repoErr, repository.ErrNotFound) {
+			h.sender.AnswerCallback("", "Subscription not found")
+			return
+		}
+		h.log.Error("callback unmute",
+			slog.Group("chat", slog.Int64("id", chatID)),
+			slog.String("repo", repoURL),
+			slog.String("event", string(event)),
+			slog.String("err", err.Error()),
+		)
+		h.sender.AnswerCallback("", "Internal error, please try again later")
+		return
+	}
+
+	h.log.Info("unmuted via callback",
+		slog.Group("chat", slog.Int64("id", chatID)),
+		slog.String("repo", repoURL),
+		slog.String("event", string(event)),
+	)
+	h.sender.EditText(chatID, messageID, "🔔 Unmuted "+string(event)+" events for "+repoURL)
+}

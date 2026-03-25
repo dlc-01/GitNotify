@@ -118,3 +118,18 @@ func (r *Repository) MuteEvent(ctx context.Context, chatID int64, repoURL string
 	}
 	return nil
 }
+
+func (r *Repository) UnmuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE subscriptions
+		SET muted_events = array_remove(muted_events, $3::text)
+		WHERE chat_id = $1 AND repo_url = $2
+	`, chatID, repoURL, string(event))
+	if err != nil {
+		return repository.Wrap("UnmuteEvent", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return repository.Wrap("UnmuteEvent", repository.ErrNotFound)
+	}
+	return nil
+}

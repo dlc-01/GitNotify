@@ -104,6 +104,7 @@ func run(log *slog.Logger) error {
 			internalkafka.TopicSubscriptionCreated,
 			internalkafka.TopicSubscriptionDeleted,
 			internalkafka.TopicSubscriptionMuted,
+			internalkafka.TopicSubscriptionUnmuted,
 		),
 		log,
 	)

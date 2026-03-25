@@ -140,6 +140,31 @@ func (h *Handler) HandleEvent(ctx context.Context, data []byte) error {
 	return nil
 }
 
+func (h *Handler) HandleSubscriptionUnmuted(ctx context.Context, data []byte) error {
+	var msg internalkafka.SubscriptionUnmutedMessage
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return wrap("HandleSubscriptionUnmuted", internalkafka.TopicSubscriptionUnmuted.String(), ErrUnmarshal)
+	}
+
+	event := domain.EventType(msg.Event)
+	if err := h.repo.UnmuteEvent(ctx, msg.ChatID, msg.RepoURL, event); err != nil {
+		h.log.Error("unmute event",
+			slog.Group("chat", slog.Int64("id", msg.ChatID)),
+			slog.String("repo", msg.RepoURL),
+			slog.String("event", msg.Event),
+			slog.String("err", err.Error()),
+		)
+		return wrap("HandleSubscriptionUnmuted", internalkafka.TopicSubscriptionUnmuted.String(), err)
+	}
+
+	h.log.Info("subscription unmuted",
+		slog.Group("chat", slog.Int64("id", msg.ChatID)),
+		slog.String("repo", msg.RepoURL),
+		slog.String("event", msg.Event),
+	)
+	return nil
+}
+
 func formatEventMessage(msg internalkafka.WebhookEventMessage) string {
 	switch domain.EventType(msg.EventType) {
 	case domain.EventPush:

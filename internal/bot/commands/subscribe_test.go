@@ -146,10 +146,10 @@ func TestSubscribeCommand_Name(t *testing.T) {
 
 func TestSubscribeCommand_Description(t *testing.T) {
 	cmd := &SubscribeCommand{}
-	assert.Equal(t, "Subscribe to a repository", cmd.Description())
+	assert.Equal(t, "Subscribe to a repository or resource", cmd.Description())
 }
 
 func TestSubscribeCommand_Usage(t *testing.T) {
 	cmd := &SubscribeCommand{}
-	assert.Equal(t, "/subscribe <repo_url>", cmd.Usage())
+	assert.Equal(t, "/subscribe <url>", cmd.Usage())
 }

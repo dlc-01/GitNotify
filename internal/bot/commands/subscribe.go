@@ -25,8 +25,8 @@ func NewSubscribeCommand(repo repository.Repository, sender core.Senderer, log *
 }
 
 func (c *SubscribeCommand) Name() string        { return "subscribe" }
-func (c *SubscribeCommand) Description() string { return "Subscribe to a repository" }
-func (c *SubscribeCommand) Usage() string       { return "/subscribe <repo_url>" }
+func (c *SubscribeCommand) Description() string { return "Subscribe to a repository or resource" }
+func (c *SubscribeCommand) Usage() string       { return "/subscribe <url>" }
 
 func (c *SubscribeCommand) Execute(ctx context.Context, chatID int64, args string) {
 	repoURL := strings.TrimSpace(args)
