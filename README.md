@@ -1,4 +1,3 @@
-
 # GitNotify
 
 Real-time notifications from GitHub, GitLab, Stack Overflow, Reddit and YouTube — delivered to Telegram.
@@ -6,40 +5,30 @@ Real-time notifications from GitHub, GitLab, Stack Overflow, Reddit and YouTube 
 Try it: [@NotificationCollect_bot](https://t.me/NotificationCollect_bot)
 
 ## How it works
-
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Sources                              │
-│  GitHub API · GitLab API · Stack Overflow · Reddit · YouTube│
-└──────────────────────┬──────────────────────────────────────┘
-                       │ poll
-                       ▼
-                   ┌────────┐
-                   │ Poller │
-                   └───┬────┘
-                       │ produce
-                       ▼
-┌──────────┐      ┌─────────┐      ┌──────────┐      ┌──────────┐
-│   Bot    │─────►│  Kafka  │◄─────│ Webhook  │      │ Notifier │
-│(Telegram)│      └────┬────┘      │(optional)│      └────┬─────┘
-└──────────┘           │           └──────────┘           │
-     ▲                 │ consume                           │
-     │                 ▼                                   │
-     │           ┌──────────┐                             │
-     │           │ Notifier │─────────────────────────────┘
-     └───────────│          │ send message
-                 └──────────┘
+User → /subscribe → Bot → Kafka (subscriptions.created)
+                               │
+                               ▼
+                            Poller
+                  polls GitHub · GitLab · SO · Reddit · YouTube
+                               │
+                               ▼
+                      Kafka (events.push/pr/issue/...)
+                               │
+                               ▼
+                            Notifier
+                               │
+                               ▼
+                            Telegram
 ```
 
-Users subscribe to repositories and resources via Telegram bot. The poller periodically checks for new events and sends them to Kafka. The notifier picks them up and delivers to Telegram.
+Users subscribe to any public repository or resource via Telegram bot. The poller periodically checks for new events and sends them to Kafka. The notifier picks them up and delivers to Telegram.
 
 ## Services
 
 | Service | Description |
 |---|---|
 | `bot` | Telegram bot — manages subscriptions |
-| `webhook` | HTTP server — receives GitHub/GitLab webhooks (optional) |
 | `poller` | Scheduler — polls all sources via API |
 | `notifier` | Kafka consumer — sends Telegram notifications |
 
@@ -51,7 +40,7 @@ Users subscribe to repositories and resources via Telegram bot. The poller perio
 | GitLab | REST API polling | push, merge request, issue |
 | Stack Overflow | API polling | new questions by tag |
 | Reddit | RSS polling | new posts in subreddit |
-| YouTube | Data API v3 polling | new videos on channel |
+| YouTube | Data API v3 | new videos on channel |
 
 ## Stack
 
@@ -63,14 +52,13 @@ Users subscribe to repositories and resources via Telegram bot. The poller perio
 
 ## Quick start
 
-### 1. Clone and configure
-
+### 1. Clone
 ```bash
 git clone https://github.com/dlc-01/GitNotify
 cd GitNotify
 ```
 
-Create env files:
+### 2. Create env files
 
 **.env.bot**
 ```env
@@ -106,87 +94,81 @@ POLLER_YOUTUBEAPIKEY=your_youtube_data_api_key
 DEBUG=false
 ```
 
-**.env.webhook** (optional — only if you want webhook mode for GitHub/GitLab)
-```env
-WEBHOOK_HOST=0.0.0.0
-WEBHOOK_PORT=8080
-WEBHOOK_GITHUBSECRET=your_github_webhook_secret
-WEBHOOK_GITLABSECRET=your_gitlab_webhook_secret
-KAFKA_BROKERS=kafka:9092
-DEBUG=false
-```
+### 3. Get API tokens
 
-### 2. Get API tokens
-
-**GitHub token** (increases rate limit from 60 to 5000 req/hour):
+**GitHub token** — increases rate limit from 60 to 5000 req/hour:
 1. GitHub → Settings → Developer settings → Personal access tokens → Generate new token
-2. No scopes needed for public repositories
+2. Permissions: `Contents` read-only, `Metadata` read-only
+3. No scopes needed for public repositories
 
-**GitLab token** (optional, for private repos):
+**GitLab token** — optional, needed only for private repos:
 1. GitLab → User Settings → Access Tokens → Create token
 2. Scope: `read_api`
 
-**YouTube API key**:
+**YouTube API key** — required:
 1. [console.cloud.google.com](https://console.cloud.google.com) → Create project
 2. APIs & Services → Enable → YouTube Data API v3
 3. Credentials → Create Credentials → API key
 
-### 3. Run
+Stack Overflow and Reddit work without any tokens.
 
+### 4. Run
 ```bash
 docker compose up -d
 ```
 
-### 4. Try it
+### 5. Try it
 
-Open [@NotificationCollect_bot](https://t.me/NotificationCollect_bot) and subscribe:
-
+Open [@NotificationCollect_bot](https://t.me/NotificationCollect_bot) and try:
 ```
+/sources
 /subscribe https://github.com/golang/go
 /subscribe https://stackoverflow.com/questions/tagged/golang
 /subscribe https://reddit.com/r/golang
 /subscribe https://youtube.com/@GolangCafe
+/list
+/mute https://github.com/golang/go push
+/unmute https://github.com/golang/go push
 ```
 
 ## Bot commands
 
-```
-/subscribe <url>         subscribe to a repository or resource
-/unsubscribe <url>       unsubscribe
-/list                    list your subscriptions
-/mute <url> <event>      mute an event type
-```
+| Command | Description |
+|---|---|
+| `/subscribe <url>` | Subscribe to a repository or resource |
+| `/unsubscribe <url>` | Unsubscribe |
+| `/list` | List your subscriptions with inline controls |
+| `/mute <url> <event>` | Mute an event type |
+| `/unmute <url> <event>` | Unmute an event type |
+| `/sources` | Show supported sources and event types |
+| `/help` | Show all commands |
 
 **Event types:** `push` `pr` `issue` `pipeline` `answer` `post` `video`
 
 ## Project structure
-
 ```
 GitNotify/
 ├── cmd/
 │   ├── bot/             entry point — Telegram bot
-│   ├── webhook/         entry point — webhook receiver (optional)
 │   ├── notifier/        entry point — Kafka consumer
 │   └── poller/          entry point — polling scheduler
 ├── internal/
 │   ├── bot/             bot handlers, commands, callbacks
 │   │   ├── core/        registry, sender, middleware
-│   │   ├── commands/    subscribe, unsubscribe, list, mute, help
+│   │   ├── commands/    subscribe, unsubscribe, list, mute, unmute, sources, help
 │   │   └── callback/    inline keyboard handlers
-│   ├── config/          configuration (yaml + env via viper)
+│   ├── config/          configuration (env + optional yaml)
 │   ├── domain/          shared types — User, Chat, Subscription, EventType
 │   ├── kafka/           producer, multi-producer, consumer, topics, messages
 │   ├── notifier/        notification handler, postgres repository
 │   ├── poller/          GitHub, GitLab, SO, Reddit, YouTube pollers + scheduler
-│   ├── repository/      bot postgres repository + logging decorator
-│   └── webhook/         HTTP handler, GitHub/GitLab parser and validator
+│   └── repository/      bot postgres repository + logging decorator
 └── migrations/
-    ├── bot/             001_init.sql
-    └── notifier/        001_init.sql
+    ├── bot/
+    └── notifier/
 ```
 
 ## Running tests
-
 ```bash
 # unit tests
 go test ./...
@@ -202,7 +184,6 @@ go test -tags integration ./internal/notifier/... -v
 
 **Why separate databases?** The bot owns user and chat data. The notifier only needs a flat list of `(chat_id, repo_url, muted_events)`. Separate schemas make each service independently deployable and scalable.
 
-**Why polling instead of webhooks for GitHub/GitLab?** Webhooks require a public URL and manual setup per repository. Polling via API works for any public repository without configuration — users just paste a URL and subscribe. GitHub API allows 5000 requests per hour with a token, which is sufficient for reasonable polling intervals.
+**Why polling instead of webhooks?** Webhooks require a public URL and manual setup per repository. Polling via API works for any public repository without configuration — users just paste a URL and subscribe. GitHub API allows 5000 requests per hour with a token, which is sufficient for reasonable polling intervals.
 
 **Why groups support?** Telegram groups are a natural fit for team notifications. Any admin can subscribe a group chat to a repository, and the whole team gets notified without each member setting up individual subscriptions.
-```
