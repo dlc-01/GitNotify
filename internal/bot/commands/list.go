@@ -72,8 +72,8 @@ func buildKeyboard(sub *domain.Subscription) tgbotapi.InlineKeyboardMarkup {
 		},
 	}
 
-	eventButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(domain.AllEventTypes))
-	for _, event := range domain.AllEventTypes {
+	eventButtons := make([]tgbotapi.InlineKeyboardButton, 0)
+	for _, event := range relevantEvents(sub.RepoURL) {
 		if sub.IsEventMuted(event) {
 			eventButtons = append(eventButtons, tgbotapi.NewInlineKeyboardButtonData(
 				fmt.Sprintf("🔔 %s", string(event)),
@@ -92,4 +92,17 @@ func buildKeyboard(sub *domain.Subscription) tgbotapi.InlineKeyboardMarkup {
 	}
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
+}
+
+func relevantEvents(url string) []domain.EventType {
+	switch {
+	case strings.HasPrefix(url, "https://stackoverflow.com/"):
+		return []domain.EventType{domain.EventAnswer}
+	case strings.HasPrefix(url, "https://reddit.com/"):
+		return []domain.EventType{domain.EventPost}
+	case strings.HasPrefix(url, "https://youtube.com/"):
+		return []domain.EventType{domain.EventVideo}
+	default:
+		return []domain.EventType{domain.EventPush, domain.EventPR, domain.EventIssue, domain.EventPipeline}
+	}
 }
