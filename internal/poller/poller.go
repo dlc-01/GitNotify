@@ -3,6 +3,7 @@ package poller
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -51,6 +52,7 @@ func NewScheduler(
 func (s *Scheduler) Watch(url string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	url = normalizeURL(url)
 	if _, ok := s.watching[url]; !ok {
 		s.watching[url] = time.Now()
 		s.log.Info("watching url", slog.String("url", url))
@@ -60,8 +62,13 @@ func (s *Scheduler) Watch(url string) {
 func (s *Scheduler) Unwatch(url string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	url = normalizeURL(url)
 	delete(s.watching, url)
 	s.log.Info("unwatching url", slog.String("url", url))
+}
+
+func normalizeURL(url string) string {
+	return strings.Replace(url, "https://www.", "https://", 1)
 }
 
 func (s *Scheduler) Run(ctx context.Context) error {
