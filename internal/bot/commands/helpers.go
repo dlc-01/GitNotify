@@ -10,3 +10,7 @@ func isValidRepoURL(url string) bool {
 		strings.HasPrefix(url, "https://www.youtube.com/") ||
 		strings.HasPrefix(url, "https://youtube.com/")
 }
+
+func normalizeURL(url string) string {
+	return strings.Replace(url, "https://www.", "https://", 1)
+}
