@@ -30,7 +30,6 @@ func (c *SubscribeCommand) Usage() string       { return "/subscribe <url>" }
 
 func (c *SubscribeCommand) Execute(ctx context.Context, chatID int64, args string) {
 	repoURL := normalizeURL(strings.TrimSpace(args))
-	repoURL = strings.TrimSpace(args)
 	if repoURL == "" {
 		c.sender.SendErr(chatID, core.Wrap("Execute", core.ErrEmptyArgs))
 		return

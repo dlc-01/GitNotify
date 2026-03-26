@@ -7,7 +7,6 @@ func isValidRepoURL(url string) bool {
 		strings.HasPrefix(url, "https://gitlab.com/") ||
 		strings.HasPrefix(url, "https://stackoverflow.com/") ||
 		strings.HasPrefix(url, "https://reddit.com/") ||
-		strings.HasPrefix(url, "https://www.youtube.com/") ||
 		strings.HasPrefix(url, "https://youtube.com/")
 }
 
