@@ -37,7 +37,7 @@ func (c *UnmuteCommand) Execute(ctx context.Context, chatID int64, args string) 
 		return
 	}
 
-	repoURL := parts[0]
+	repoURL := normalizeURL(strings.TrimSpace(parts[0]))
 	event := domain.EventType(parts[1])
 
 	if !event.Valid() {
