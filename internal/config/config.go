@@ -94,6 +94,11 @@ func Load(opts Options) (*Config, error) {
 
 	if opts.ConfigFile != "" {
 		v.SetConfigFile(opts.ConfigFile)
+		v.SetDefault("debug", false)
+		v.SetDefault("postgres.port", 5432)
+		v.SetDefault("webhook.port", 8080)
+		v.SetDefault("kafka.brokers", []string{"localhost:9092"})
+		v.SetDefault("poller.interval", 5*time.Minute)
 
 		if err := v.ReadInConfig(); err != nil {
 			if os.IsNotExist(err) {

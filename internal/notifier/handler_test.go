@@ -40,6 +40,11 @@ func (m *mockRepository) MuteEvent(ctx context.Context, chatID int64, repoURL st
 	return args.Error(0)
 }
 
+func (m *mockRepository) UnmuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error {
+	args := m.Called(ctx, chatID, repoURL, event)
+	return args.Error(0)
+}
+
 func (m *mockRepository) GetSubscribersByRepo(ctx context.Context, repoURL string, event domain.EventType) ([]int64, error) {
 	args := m.Called(ctx, repoURL, event)
 	if args.Get(0) == nil {
@@ -128,9 +133,10 @@ func TestHandler_HandleSubscriptionCreated_Success(t *testing.T) {
 
 func TestHandler_HandleSubscriptionCreated_InvalidJSON(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleSubscriptionCreated(context.Background(), []byte("invalid json"))
 
 	require.Error(t, err)
@@ -141,6 +147,7 @@ func TestHandler_HandleSubscriptionCreated_InvalidJSON(t *testing.T) {
 
 func TestHandler_HandleSubscriptionCreated_RepoError(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
 	msg := internalkafka.SubscriptionCreatedMessage{
@@ -152,7 +159,7 @@ func TestHandler_HandleSubscriptionCreated_RepoError(t *testing.T) {
 	repo.On("Subscribe", mock.Anything, int64(123), "https://github.com/golang/go").
 		Return(assert.AnError)
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleSubscriptionCreated(context.Background(), data)
 
 	require.Error(t, err)
@@ -161,6 +168,7 @@ func TestHandler_HandleSubscriptionCreated_RepoError(t *testing.T) {
 
 func TestHandler_HandleSubscriptionDeleted_Success(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
 	msg := internalkafka.SubscriptionDeletedMessage{
@@ -172,7 +180,7 @@ func TestHandler_HandleSubscriptionDeleted_Success(t *testing.T) {
 	repo.On("Unsubscribe", mock.Anything, int64(123), "https://github.com/golang/go").
 		Return(nil)
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleSubscriptionDeleted(context.Background(), data)
 
 	require.NoError(t, err)
@@ -181,6 +189,7 @@ func TestHandler_HandleSubscriptionDeleted_Success(t *testing.T) {
 
 func TestHandler_HandleSubscriptionDeleted_NotFound(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
 	msg := internalkafka.SubscriptionDeletedMessage{
@@ -192,7 +201,7 @@ func TestHandler_HandleSubscriptionDeleted_NotFound(t *testing.T) {
 	repo.On("Unsubscribe", mock.Anything, int64(123), "https://github.com/golang/go").
 		Return(ErrNotFound)
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleSubscriptionDeleted(context.Background(), data)
 
 	require.NoError(t, err)
@@ -201,9 +210,10 @@ func TestHandler_HandleSubscriptionDeleted_NotFound(t *testing.T) {
 
 func TestHandler_HandleSubscriptionDeleted_InvalidJSON(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleSubscriptionDeleted(context.Background(), []byte("invalid json"))
 
 	require.Error(t, err)
@@ -214,6 +224,7 @@ func TestHandler_HandleSubscriptionDeleted_InvalidJSON(t *testing.T) {
 
 func TestHandler_HandleSubscriptionMuted_Success(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
 	msg := internalkafka.SubscriptionMutedMessage{
@@ -226,7 +237,7 @@ func TestHandler_HandleSubscriptionMuted_Success(t *testing.T) {
 	repo.On("MuteEvent", mock.Anything, int64(123), "https://github.com/golang/go", domain.EventPush).
 		Return(nil)
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleSubscriptionMuted(context.Background(), data)
 
 	require.NoError(t, err)
@@ -235,10 +246,47 @@ func TestHandler_HandleSubscriptionMuted_Success(t *testing.T) {
 
 func TestHandler_HandleSubscriptionMuted_InvalidJSON(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleSubscriptionMuted(context.Background(), []byte("invalid json"))
+
+	require.Error(t, err)
+	var notifierErr *Error
+	require.ErrorAs(t, err, &notifierErr)
+	assert.ErrorIs(t, notifierErr, ErrUnmarshal)
+}
+
+func TestHandler_HandleSubscriptionUnmuted_Success(t *testing.T) {
+	repo := &mockRepository{}
+	sender := &mockSender{}
+	log := newTestLogger()
+
+	msg := internalkafka.SubscriptionUnmutedMessage{
+		ChatID:  123,
+		RepoURL: "https://github.com/golang/go",
+		Event:   "push",
+	}
+	data, _ := json.Marshal(msg)
+
+	repo.On("UnmuteEvent", mock.Anything, int64(123), "https://github.com/golang/go", domain.EventPush).
+		Return(nil)
+
+	h := NewHandler(repo, sender, log)
+	err := h.HandleSubscriptionUnmuted(context.Background(), data)
+
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestHandler_HandleSubscriptionUnmuted_InvalidJSON(t *testing.T) {
+	repo := &mockRepository{}
+	sender := &mockSender{}
+	log := newTestLogger()
+
+	h := NewHandler(repo, sender, log)
+	err := h.HandleSubscriptionUnmuted(context.Background(), []byte("invalid json"))
 
 	require.Error(t, err)
 	var notifierErr *Error
@@ -248,9 +296,10 @@ func TestHandler_HandleSubscriptionMuted_InvalidJSON(t *testing.T) {
 
 func TestHandler_HandleEvent_InvalidJSON(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleEvent(context.Background(), []byte("invalid json"))
 
 	require.Error(t, err)
@@ -261,6 +310,7 @@ func TestHandler_HandleEvent_InvalidJSON(t *testing.T) {
 
 func TestHandler_HandleEvent_RepoError(t *testing.T) {
 	repo := &mockRepository{}
+	sender := &mockSender{}
 	log := newTestLogger()
 
 	msg := internalkafka.WebhookEventMessage{
@@ -273,11 +323,35 @@ func TestHandler_HandleEvent_RepoError(t *testing.T) {
 	repo.On("GetSubscribersByRepo", mock.Anything, "https://github.com/golang/go", domain.EventPush).
 		Return(nil, assert.AnError)
 
-	h := NewHandler(repo, &Sender{}, log)
+	h := NewHandler(repo, sender, log)
 	err := h.HandleEvent(context.Background(), data)
 
 	require.Error(t, err)
 	repo.AssertExpectations(t)
+}
+
+func TestHandler_HandleEvent_SendError(t *testing.T) {
+	repo := &mockRepository{}
+	sender := &mockSender{}
+	log := newTestLogger()
+
+	msg := internalkafka.WebhookEventMessage{
+		RepoURL:   "https://github.com/golang/go",
+		EventType: "push",
+		Source:    "github",
+	}
+	data, _ := json.Marshal(msg)
+
+	repo.On("GetSubscribersByRepo", mock.Anything, "https://github.com/golang/go", domain.EventPush).
+		Return([]int64{123}, nil)
+	sender.On("Send", mock.Anything, int64(123), mock.Anything).Return(assert.AnError)
+
+	h := NewHandler(repo, sender, log)
+	err := h.HandleEvent(context.Background(), data)
+
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+	sender.AssertExpectations(t)
 }
 
 func TestFormatEventMessage(t *testing.T) {

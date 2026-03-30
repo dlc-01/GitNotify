@@ -8,17 +8,20 @@ import (
 
 	"github.com/dlc-01/GitNotify/internal/bot/core"
 	"github.com/dlc-01/GitNotify/internal/domain"
+	internalkafka "github.com/dlc-01/GitNotify/internal/kafka"
+	"github.com/dlc-01/GitNotify/internal/kafka/producer"
 	"github.com/dlc-01/GitNotify/internal/repository"
 )
 
 type UnmuteHandler struct {
-	repo   repository.Repository
-	sender core.Senderer
-	log    *slog.Logger
+	repo     repository.Repository
+	sender   core.Senderer
+	log      *slog.Logger
+	producer producer.MultiProducer
 }
 
-func NewUnmuteHandler(repo repository.Repository, sender core.Senderer, log *slog.Logger) *UnmuteHandler {
-	return &UnmuteHandler{repo: repo, sender: sender, log: log}
+func NewUnmuteHandler(repo repository.Repository, sender core.Senderer, log *slog.Logger, p producer.MultiProducer) *UnmuteHandler {
+	return &UnmuteHandler{repo: repo, sender: sender, log: log, producer: p}
 }
 
 func (h *UnmuteHandler) Action() string { return "unmute" }
@@ -52,6 +55,19 @@ func (h *UnmuteHandler) Execute(ctx context.Context, chatID int64, messageID int
 		)
 		h.sender.AnswerCallback("", "Internal error, please try again later")
 		return
+	}
+
+	if err := h.producer.ProduceTo(ctx, internalkafka.TopicSubscriptionUnmuted, internalkafka.SubscriptionUnmutedMessage{
+		ChatID:  chatID,
+		RepoURL: repoURL,
+		Event:   string(event),
+	}); err != nil {
+		h.log.Error("produce subscription unmuted via callback",
+			slog.Group("chat", slog.Int64("id", chatID)),
+			slog.String("repo", repoURL),
+			slog.String("event", string(event)),
+			slog.String("err", err.Error()),
+		)
 	}
 
 	h.log.Info("unmuted via callback",

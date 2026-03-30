@@ -6,17 +6,20 @@ import (
 	"log/slog"
 
 	"github.com/dlc-01/GitNotify/internal/bot/core"
+	internalkafka "github.com/dlc-01/GitNotify/internal/kafka"
+	"github.com/dlc-01/GitNotify/internal/kafka/producer"
 	"github.com/dlc-01/GitNotify/internal/repository"
 )
 
 type UnsubscribeHandler struct {
-	repo   repository.Repository
-	sender core.Senderer
-	log    *slog.Logger
+	repo     repository.Repository
+	sender   core.Senderer
+	log      *slog.Logger
+	producer producer.MultiProducer
 }
 
-func NewUnsubscribeHandler(repo repository.Repository, sender core.Senderer, log *slog.Logger) *UnsubscribeHandler {
-	return &UnsubscribeHandler{repo: repo, sender: sender, log: log}
+func NewUnsubscribeHandler(repo repository.Repository, sender core.Senderer, log *slog.Logger, p producer.MultiProducer) *UnsubscribeHandler {
+	return &UnsubscribeHandler{repo: repo, sender: sender, log: log, producer: p}
 }
 
 func (h *UnsubscribeHandler) Action() string { return "unsubscribe" }
@@ -29,8 +32,7 @@ func (h *UnsubscribeHandler) Execute(ctx context.Context, chatID int64, messageI
 			return
 		}
 		h.log.Error("callback unsubscribe",
-			slog.Group("chat",
-				slog.Int64("id", chatID)),
+			slog.Group("chat", slog.Int64("id", chatID)),
 			slog.String("repo", args),
 			slog.String("err", err.Error()),
 		)
@@ -38,9 +40,19 @@ func (h *UnsubscribeHandler) Execute(ctx context.Context, chatID int64, messageI
 		return
 	}
 
+	if err := h.producer.ProduceTo(ctx, internalkafka.TopicSubscriptionDeleted, internalkafka.SubscriptionDeletedMessage{
+		ChatID:  chatID,
+		RepoURL: args,
+	}); err != nil {
+		h.log.Error("produce subscription deleted via callback",
+			slog.Group("chat", slog.Int64("id", chatID)),
+			slog.String("repo", args),
+			slog.String("err", err.Error()),
+		)
+	}
+
 	h.log.Info("unsubscribed via callback",
-		slog.Group("chat",
-			slog.Int64("id", chatID)),
+		slog.Group("chat", slog.Int64("id", chatID)),
 		slog.String("repo", args),
 	)
 	h.sender.EditText(chatID, messageID, "✅ Unsubscribed from "+args)

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/dlc-01/GitNotify/internal/domain"
+	internalkafka "github.com/dlc-01/GitNotify/internal/kafka"
 )
 
 type mockRepository struct {
@@ -46,6 +47,25 @@ func (m *mockRepository) ListSubscriptions(ctx context.Context, chatID int64) ([
 
 func (m *mockRepository) MuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error {
 	args := m.Called(ctx, chatID, repoURL, event)
+	return args.Error(0)
+}
+
+func (m *mockRepository) UnmuteEvent(ctx context.Context, chatID int64, repoURL string, event domain.EventType) error {
+	args := m.Called(ctx, chatID, repoURL, event)
+	return args.Error(0)
+}
+
+type mockMultiProducer struct {
+	mock.Mock
+}
+
+func (m *mockMultiProducer) ProduceTo(ctx context.Context, topic internalkafka.Topic, msg any) error {
+	args := m.Called(ctx, topic, msg)
+	return args.Error(0)
+}
+
+func (m *mockMultiProducer) Close() error {
+	args := m.Called()
 	return args.Error(0)
 }
 

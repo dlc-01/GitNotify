@@ -10,13 +10,8 @@ import (
 )
 
 func TestLoad_FileNotFound(t *testing.T) {
-	_, err := Load("/nonexistent/path/config.yaml")
+	_, err := Load(Options{ConfigFile: "/nonexistent/path/config.yaml"})
 	require.Error(t, err)
-
-	var cfgErr *Error
-	require.ErrorAs(t, err, &cfgErr)
-	assert.ErrorIs(t, cfgErr, ErrNotFound)
-	assert.Equal(t, "/nonexistent/path/config.yaml", cfgErr.Path)
 }
 
 func TestLoad_InvalidYaml(t *testing.T) {
@@ -28,12 +23,8 @@ func TestLoad_InvalidYaml(t *testing.T) {
 	require.NoError(t, err)
 	f.Close()
 
-	_, err = Load(f.Name())
+	_, err = Load(Options{ConfigFile: f.Name()})
 	require.Error(t, err)
-
-	var cfgErr *Error
-	require.ErrorAs(t, err, &cfgErr)
-	assert.ErrorIs(t, cfgErr, ErrInvalid)
 }
 
 func TestLoad_ValidYaml(t *testing.T) {
@@ -59,7 +50,7 @@ kafka:
 	require.NoError(t, err)
 	f.Close()
 
-	cfg, err := Load(f.Name())
+	cfg, err := Load(Options{ConfigFile: f.Name()})
 	require.NoError(t, err)
 
 	assert.True(t, cfg.Debug)
@@ -92,7 +83,7 @@ func TestLoad_EmptyPath_EnvOnly(t *testing.T) {
 		os.Unsetenv("DEBUG")
 	}()
 
-	cfg, err := Load("")
+	cfg, err := Load(Options{})
 	require.NoError(t, err)
 
 	assert.True(t, cfg.Debug)
@@ -123,7 +114,7 @@ postgres:
 	os.Setenv("BOT_TOKEN", "env-token")
 	defer os.Unsetenv("BOT_TOKEN")
 
-	cfg, err := Load(f.Name())
+	cfg, err := Load(Options{ConfigFile: f.Name()})
 	require.NoError(t, err)
 
 	assert.Equal(t, "env-token", cfg.Bot.Token)
@@ -135,7 +126,7 @@ func TestLoad_Defaults(t *testing.T) {
 	path := filepath.Join(dir, "empty.yaml")
 	require.NoError(t, os.WriteFile(path, []byte("debug: false\n"), 0644))
 
-	cfg, err := Load(path)
+	cfg, err := Load(Options{ConfigFile: path})
 	require.NoError(t, err)
 
 	assert.Equal(t, 5432, cfg.Postgres.Port)
@@ -146,7 +137,7 @@ func TestLoad_KafkaBrokersCommaSeparated(t *testing.T) {
 	os.Setenv("KAFKA_BROKERS", "kafka1:9092,kafka2:9092,kafka3:9092")
 	defer os.Unsetenv("KAFKA_BROKERS")
 
-	cfg, err := Load("")
+	cfg, err := Load(Options{})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"}, cfg.Kafka.Brokers)

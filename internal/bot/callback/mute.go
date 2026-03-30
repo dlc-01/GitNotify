@@ -8,17 +8,20 @@ import (
 
 	"github.com/dlc-01/GitNotify/internal/bot/core"
 	"github.com/dlc-01/GitNotify/internal/domain"
+	internalkafka "github.com/dlc-01/GitNotify/internal/kafka"
+	"github.com/dlc-01/GitNotify/internal/kafka/producer"
 	"github.com/dlc-01/GitNotify/internal/repository"
 )
 
 type MuteHandler struct {
-	repo   repository.Repository
-	sender core.Senderer
-	log    *slog.Logger
+	repo     repository.Repository
+	sender   core.Senderer
+	log      *slog.Logger
+	producer producer.MultiProducer
 }
 
-func NewMuteHandler(repo repository.Repository, sender core.Senderer, log *slog.Logger) *MuteHandler {
-	return &MuteHandler{repo: repo, sender: sender, log: log}
+func NewMuteHandler(repo repository.Repository, sender core.Senderer, log *slog.Logger, p producer.MultiProducer) *MuteHandler {
+	return &MuteHandler{repo: repo, sender: sender, log: log, producer: p}
 }
 
 func (h *MuteHandler) Action() string { return "mute" }
@@ -57,6 +60,19 @@ func (h *MuteHandler) Execute(ctx context.Context, chatID int64, messageID int, 
 		)
 		h.sender.AnswerCallback("", "Internal error, please try again later")
 		return
+	}
+
+	if err := h.producer.ProduceTo(ctx, internalkafka.TopicSubscriptionMuted, internalkafka.SubscriptionMutedMessage{
+		ChatID:  chatID,
+		RepoURL: repoURL,
+		Event:   string(event),
+	}); err != nil {
+		h.log.Error("produce subscription muted via callback",
+			slog.Group("chat", slog.Int64("id", chatID)),
+			slog.String("repo", repoURL),
+			slog.String("event", string(event)),
+			slog.String("err", err.Error()),
+		)
 	}
 
 	h.log.Info("muted via callback",

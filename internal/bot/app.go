@@ -52,9 +52,9 @@ func New(
 	registry.Register(commands.NewStartCommand(sender, registry))
 	registry.Register(commands.NewSourcesCommand(sender))
 
-	callbackRegistry.Register(callback.NewUnsubscribeHandler(repo, sender, log))
-	callbackRegistry.Register(callback.NewMuteHandler(repo, sender, log))
-	callbackRegistry.Register(callback.NewUnmuteHandler(repo, sender, log))
+	callbackRegistry.Register(callback.NewUnsubscribeHandler(repo, sender, log, prod))
+	callbackRegistry.Register(callback.NewMuteHandler(repo, sender, log, prod))
+	callbackRegistry.Register(callback.NewUnmuteHandler(repo, sender, log, prod))
 
 	handler := NewHandler(api, repo, log, sender, registry, callbackRegistry)
 
